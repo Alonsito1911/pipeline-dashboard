@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Pipeline UE — Funnel de corrida</title>
+<style>
+  :root { color-scheme: light;
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --border:rgba(11,11,11,0.10);
+    --s1:#2a78d6; --s2:#008300; --s3:#e87ba4; --s4:#eda100;
+    --ord-1:#86b6ef; --ord-2:#5598e7; --ord-3:#2a78d6; --ord-4:#1c5cab;
+    --good:#006300; }
+  @media (prefers-color-scheme: dark) { :root {
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --border:rgba(255,255,255,0.10);
+    --s1:#3987e5; --s2:#008300; --s3:#d55181; --s4:#c98500;
+    --ord-1:#9ec5f4; --ord-2:#6da7ec; --ord-3:#3987e5; --ord-4:#256abf;
+    --good:#0ca30c; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--page); color:var(--ink);
+         font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .wrap { max-width:1120px; margin:0 auto; padding:28px 20px 64px; }
+  h1 { font-size:21px; font-weight:650; margin:0 0 2px; }
+  .sub { color:var(--ink-2); margin:0; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:18px 0 22px; }
+  select { background:var(--surface); color:var(--ink); border:1px solid var(--border);
+           border-radius:8px; padding:6px 10px; font:inherit; font-size:13px; }
+  .lbl-sel { font-size:12.5px; color:var(--ink-2); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:12px; }
+  .tile { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 15px 11px; }
+  .tile .l { font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+  .tile .v { font-size:25px; font-weight:650; margin:2px 0 1px; }
+  .tile .s { font-size:11.5px; color:var(--ink-2); }
+  .balance { font-size:12px; color:var(--good); font-weight:600; margin:10px 0 0 2px; }
+  .bloque { margin-top:34px; border-top:2px solid var(--ink); padding-top:14px; }
+  .eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; }
+  .desc { font-size:12.5px; color:var(--ink-2); margin:3px 0 14px; max-width:72ch; }
+  section { margin-top:18px; }
+  .sec-h { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  .sec-h h2 { font-size:14.5px; font-weight:650; margin:0; }
+  .note { font-size:12px; color:var(--muted); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:15px 17px 13px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:760px){ .two{grid-template-columns:1fr;} }
+  .pt { font-size:11.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:9px; }
+  .bars { display:flex; flex-direction:column; gap:6px; }
+  .brow { display:grid; grid-template-columns:200px 1fr 62px; align-items:center; gap:10px; }
+  .brow.wide { grid-template-columns:330px 1fr 62px; }
+  @media (max-width:760px){ .brow,.brow.wide{grid-template-columns:140px 1fr 56px;} }
+  .name { font-size:12px; color:var(--ink-2); text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .val { font-size:12px; font-variant-numeric:tabular-nums; }
+  .track { position:relative; height:17px; }
+  .track::before { content:""; position:absolute; left:0; top:0; bottom:0; width:1px; background:var(--grid); }
+  .fill { position:absolute; left:0; top:0; bottom:0; border-radius:0 4px 4px 0; min-width:2px; }
+  .grouped .track { height:29px; }
+  .grouped .a { height:12px; top:1px; }
+  .grouped .b { height:12px; top:16px; }
+  .stack { display:flex; height:21px; gap:2px; }
+  .seg { border-radius:4px; min-width:3px; position:relative; }
+  .seg span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+              font-size:10.5px; font-weight:600; color:#fff; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:9px; }
+  .lg { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2); }
+  .lg i { width:10px; height:10px; border-radius:3px; }
+  footer { margin-top:30px; font-size:11.5px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pipeline UE — Funnel de corrida</h1>
+  <p class="sub">Flujo A: asignación a canónicos existentes · Flujo B: creación de canónicos nuevos</p>
+  <div class="filters">
+    <span class="lbl-sel">Corrida:</span><select id="sel-run"></select>
+    <span class="lbl-sel">Cadena:</span>
+    <select id="sel-cadena">
+      <option value="ambas">Todas</option><option value="lider">Lider</option><option value="cencosud">Cencosud</option>
+    </select>
+  </div>
+  <div class="tiles" id="tiles"></div>
+  <div class="balance" id="bal-global"></div>
+  <div id="cuerpo"></div>
+  <footer>Generado automáticamente desde sandbox._pipeline_run_etapas · pipeline-gregario</footer>
+</div>
+<script>
+const DATA = {"2026-07-19 08:12 UTC": [["cencosud", "comun", 1, "extraccion", "items_unicos", 41615], ["lider", "comun", 1, "extraccion", "items_unicos", 21344], ["cencosud", "comun", 2, "canonicos", "con_canonico", 29693], ["lider", "comun", 2, "canonicos", "sin_canonico", 13173], ["cencosud", "comun", 2, "canonicos", "sin_canonico", 11922], ["lider", "comun", 2, "canonicos", "con_canonico", 8171], ["cencosud", "comun", 3, "cliente", "con_cliente", 28943], ["lider", "comun", 3, "cliente", "con_cliente", 8135], ["cencosud", "comun", 3, "cliente", "sin_cliente", 750], ["lider", "comun", 3, "cliente", "sin_cliente", 36], ["lider", "comun", 4, "matching_catalogo", "con_cruce", 11866], ["cencosud", "comun", 4, "matching_catalogo", "con_cruce", 11335], ["lider", "comun", 4, "matching_catalogo", "sin_cruce", 1307], ["cencosud", "comun", 4, "matching_catalogo", "sin_cruce", 587], ["lider", "comun", 5, "sap", "con_sap_id", 11754], ["cencosud", "comun", 5, "sap", "con_sap_id", 10196], ["cencosud", "comun", 5, "sap", "sin_sap_id", 1139], ["lider", "comun", 5, "sap", "sin_sap_id", 112], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt2", 5370], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt", 5346], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_ue_ean", 5272], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_ue_ean", 2161], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_jumbo_ean", 1994], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_jumbo", 1719], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_sisa", 1313], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_sisa_ean", 511], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_tri_lider", 337], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_tri_jumbo", 221], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_tri_sisa", 171], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt_ean", 168], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt_ean2", 50], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt_img2", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_jumbo", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_sisa", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_mi_img", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_uber_img", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt_img", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt_img2", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_jumbo_img", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_sisa_img", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_jumbo_ean", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_sisa_ean", 0], ["lider", "asignacion_existentes", 6, "rp_metodo", "canon_tri_lider", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_tri_sisa", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt2", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_mi_img", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_uber_img", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt_img", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_tri_jumbo", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_jumbo_img", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_sisa_img", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt_ean", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt_ean2", 0], ["cencosud", "asignacion_existentes", 6, "rp_metodo", "canon_lider_alt", 0], ["lider", "asignacion_existentes", 7, "destino_final", "sube_productcode", 5923], ["cencosud", "creacion_nuevos", 7, "destino_final", "canonico_nuevo", 5490], ["lider", "creacion_nuevos", 7, "destino_final", "canonico_nuevo", 4263], ["cencosud", "asignacion_existentes", 7, "destino_final", "sube_productcode", 2522], ["cencosud", "creacion_nuevos", 7, "destino_final", "sin_canon_no_preparado", 1430], ["lider", "perdidas", 7, "destino_final", "perdido_sin_match", 1307], ["cencosud", "perdidas", 7, "destino_final", "perdido_sin_sap", 1139], ["lider", "asignacion_existentes", 7, "destino_final", "cuarentena_mv_mismatch", 1080], ["cencosud", "asignacion_existentes", 7, "destino_final", "cuarentena_mv_mismatch", 656], ["cencosud", "perdidas", 7, "destino_final", "perdido_sin_match", 587], ["lider", "asignacion_existentes", 7, "destino_final", "filtrado_en_carga", 204], ["lider", "asignacion_existentes", 7, "destino_final", "conflicto", 179], ["lider", "perdidas", 7, "destino_final", "perdido_sin_sap", 112], ["lider", "creacion_nuevos", 7, "destino_final", "sin_canon_no_preparado", 105], ["cencosud", "asignacion_existentes", 7, "destino_final", "conflicto", 45], ["cencosud", "asignacion_existentes", 7, "destino_final", "filtrado_en_carga", 44], ["cencosud", "perdidas", 7, "destino_final", "perdido_triangulacion", 9], ["lider", "asignacion_existentes", 8, "carga_productcodes", "ue", 5922], ["cencosud", "asignacion_existentes", 8, "carga_productcodes", "ue", 2518], ["lider", "asignacion_existentes", 8, "carga_productcodes", "lider", 875], ["cencosud", "asignacion_existentes", 8, "carga_productcodes", "jumbo", 745], ["cencosud", "asignacion_existentes", 8, "carga_productcodes", "sisa", 304], ["cencosud", "asignacion_existentes", 8, "carga_productcodes", "lider", 12], ["lider", "asignacion_existentes", 8, "carga_productcodes", "jumbo", 10], ["lider", "asignacion_existentes", 8, "carga_productcodes", "sisa", 7], ["ambas", "asignacion_existentes", 9, "carga_canonicos", "canonicos_impactados", 7932], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider", 4787], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo", 1081], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + sap_lider", 801], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + sap_jumbo", 416], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_sisa", 196], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + ue_sisa + sap_jumbo + sap_sisa", 89], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + sap_jumbo", 87], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo", 83], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_sisa + sap_sisa", 64], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + sap_jumbo + sap_sisa", 56], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + ue_sisa", 51], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + sap_lider", 32], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_sisa + sap_jumbo + sap_sisa", 29], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_sisa", 21], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + ue_sisa + sap_jumbo + sap_sisa", 19], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_sisa + sap_lider", 17], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + sap_jumbo + sap_sisa", 15], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + sap_lider + sap_jumbo", 11], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + ue_sisa + sap_jumbo", 10], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + ue_sisa", 9], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_sisa + sap_lider + sap_sisa", 9], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_sisa + sap_sisa", 6], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + sap_jumbo", 5], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + ue_sisa + sap_lider", 5], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + sap_jumbo + sap_sisa", 5], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + sap_lider", 5], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + sap_sisa", 4], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_sisa + sap_jumbo + sap_sisa", 4], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + ue_sisa + sap_sisa", 3], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_sisa + sap_lider + sap_jumbo + sap_sisa", 2], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + sap_lider + sap_jumbo", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + sap_lider + sap_jumbo", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + ue_sisa + sap_jumbo", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + sap_sisa", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_sisa + sap_jumbo", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + sap_sisa", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_jumbo + ue_sisa + sap_lider + sap_jumbo + sap_sisa", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + ue_jumbo + sap_lider + sap_sisa", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "sap_jumbo + sap_sisa", 1], ["ambas", "asignacion_existentes", 10, "carga_combos", "ue_lider + sap_lider + sap_sisa", 1], ["ambas", "creacion_nuevos", 11, "creacion_estado", "listos", 8362], ["ambas", "creacion_nuevos", 11, "creacion_estado", "sin_brand_id", 1391], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_jumbo + sap_jumbo", 4201], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_lider + sap_lider", 3669], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_jumbo + ue_sisa + sap_jumbo + sap_sisa", 470], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_jumbo + sap_jumbo + sap_sisa", 383], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_lider + ue_jumbo + sap_lider + sap_jumbo", 323], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_lider + ue_jumbo + ue_sisa + sap_lider + sap_jumbo + sap_sisa", 209], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_sisa + sap_jumbo + sap_sisa", 137], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_jumbo + ue_sisa + sap_jumbo", 123], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_sisa + sap_jumbo", 98], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_sisa + sap_sisa", 75], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_lider + ue_jumbo + sap_lider + sap_jumbo + sap_sisa", 32], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_lider + ue_sisa + sap_lider + sap_jumbo + sap_sisa", 15], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_lider + ue_jumbo + ue_sisa + sap_lider + sap_jumbo", 9], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_lider + ue_sisa + sap_lider + sap_sisa", 4], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_jumbo + sap_sisa", 3], ["ambas", "creacion_nuevos", 12, "creacion_canonicos", "ue_lider + ue_sisa + sap_lider + sap_jumbo", 2], ["ambas", "creacion_nuevos", 13, "creacion_productcodes", "ue", 11288], ["ambas", "creacion_nuevos", 13, "creacion_productcodes", "jumbo", 6020], ["ambas", "creacion_nuevos", 13, "creacion_productcodes", "lider", 4358], ["ambas", "creacion_nuevos", 13, "creacion_productcodes", "sisa", 1330]]};
+const fmt = n => n.toLocaleString('es-CL');
+const $ = id => document.getElementById(id);
+
+const selRun = $('sel-run');
+Object.keys(DATA).forEach(k => { const o = document.createElement('option'); o.value = o.textContent = k; selRun.appendChild(o); });
+selRun.onchange = render; $('sel-cadena').onchange = render;
+
+function render() {
+  const R = DATA[selRun.value], selCad = $('sel-cadena').value;
+  const cadenas = selCad === 'ambas' ? ['lider','cencosud'] : [selCad];
+  const q = (cad, etapa, cat) => { const r = R.find(x => x[0]===cad && x[3]===etapa && x[4]===cat); return r ? r[5] : 0; };
+  const qs = f => R.filter(f).reduce((a,r)=>a+r[5],0);
+  const cats = (etapa, flujo) => [...new Set(R.filter(r=>r[3]===etapa && (!flujo||r[1]===flujo) && cadenas.includes(r[0])).map(r=>r[4]))];
+  const inCad = r => cadenas.includes(r[0]);
+
+  /* tiles */
+  const ext = qs(r=>r[3]==='extraccion'&&inCad(r)), setSC = qs(r=>r[3]==='canonicos'&&r[4]==='sin_canonico'&&inCad(r));
+  const aSube = qs(r=>r[3]==='destino_final'&&r[4]==='sube_productcode'&&inCad(r));
+  const aRet = qs(r=>r[3]==='destino_final'&&['cuarentena_mv_mismatch','conflicto','filtrado_en_carga'].includes(r[4])&&inCad(r));
+  const bTot = qs(r=>r[3]==='destino_final'&&r[1]==='creacion_nuevos'&&inCad(r));
+  const perd = qs(r=>r[3]==='destino_final'&&r[1]==='perdidas'&&inCad(r));
+  const codesA = qs(r=>r[3]==='carga_productcodes'&&inCad(r));
+  const codesB = qs(r=>r[3]==='creacion_productcodes');
+  $('tiles').innerHTML = [
+    ['Items únicos extraídos', ext, ''],
+    ['Set sin canónico', setSC, 'universo de los flujos'],
+    ['Flujo A · suben code', aSube, fmt(codesA)+' codes'],
+    ['Flujo A · retenidos QA', aRet, 'cuarentena + conflicto + filtrado'],
+    ['Flujo B · a creación', bTot, fmt(codesB)+' codes preparados'],
+    ['Pérdidas', perd, 'filtros de calidad del tronco'],
+  ].map(([l,v,s]) => `<div class="tile"><div class="l">${l}</div><div class="v">${fmt(v)}</div><div class="s">${s}</div></div>`).join('');
+  const ok = (aSube+aRet+bTot+perd) === setSC;
+  $('bal-global').textContent = ok ? `✓ balance exacto: ${fmt(aSube+aRet)} (A) + ${fmt(bTot)} (B) + ${fmt(perd)} (pérdidas) = ${fmt(setSC)}`
+                                   : `✗ DESCUADRE: destinos ${fmt(aSube+aRet+bTot+perd)} vs set ${fmt(setSC)}`;
+  $('bal-global').style.color = ok ? 'var(--good)' : '#d03b3b';
+
+  /* helpers de dibujo */
+  const bar = (name,val,max,color,wide) => `<div class="brow${wide?' wide':''}"><span class="name" title="${name}">${name}</span>
+    <span class="track"><span class="fill" style="width:${max?(val/max*100).toFixed(2):0}%;background:${color}"></span></span>
+    <span class="val">${fmt(val)}</span></div>`;
+  const grouped = data => { const max = Math.max(1,...data.flatMap(d=>[d[1],d[2]]));
+    return `<div class="bars grouped">` + data.map(([n,l,c]) => `<div class="brow"><span class="name" title="${n}">${n}</span>
+      <span class="track"><span class="fill a" style="width:${(l/max*100).toFixed(2)}%;background:var(--s1)"></span>
+      <span class="fill b" style="width:${(c/max*100).toFixed(2)}%;background:var(--s2)"></span></span>
+      <span class="val">${fmt(l+c)}</span></div>`).join('') + `</div>
+      <div class="legend"><span class="lg"><i style="background:var(--s1)"></i> Lider</span><span class="lg"><i style="background:var(--s2)"></i> Cencosud</span></div>`; };
+  const stack = (name, vals, labels, colors, max) => { const tot = vals.reduce((a,b)=>a+b,0);
+    return `<div class="brow"><span class="name" title="${name}">${name}</span><span class="stack" style="width:${max?(tot/max*100).toFixed(2):0}%">` +
+      vals.map((v,i) => v===0?'':`<span class="seg" style="flex:${v} ${v} 0;background:${colors[i]}" title="${labels[i]}: ${fmt(v)}">${v/tot>0.13?`<span>${fmt(v)}</span>`:''}</span>`).join('') +
+      `</span><span class="val">${fmt(tot)}</span></div>`; };
+  const grpCat = (etapa, flujo) => cats(etapa, flujo)
+    .map(cat => [cat, q('lider',etapa,cat), q('cencosud',etapa,cat)])
+    .filter(d => d[1]+d[2] > 0).sort((x,y) => (y[1]+y[2])-(x[1]+x[2]));
+  const combos = etapa => { const all = R.filter(r=>r[3]===etapa).sort((a,b)=>b[5]-a[5]);
+    const top = all.slice(0,8), resto = all.slice(8);
+    const arr = top.map(r=>[r[4],r[5]]);
+    if (resto.length) arr.push([`Otros (${resto.length} combos)`, resto.reduce((a,r)=>a+r[5],0)]);
+    return arr; };
+  const barsBlock = (arr, color, wide) => { const max = Math.max(1,...arr.map(a=>a[1]));
+    return `<div class="bars">` + arr.map(([n,v]) => bar(n,v,max,color,wide)).join('') + `</div>`; };
+  const TIPOS = ['ue','lider','jumbo','sisa'], COLS = ['var(--s1)','var(--s2)','var(--s3)','var(--s4)'];
+  const legendTipos = `<div class="legend">${TIPOS.map((t,i)=>`<span class="lg"><i style="background:${COLS[i]}"></i> ${t}${i?' (SAP)':''}</span>`).join('')}</div>`;
+
+  /* funnel por cadena */
+  const funnel = cad => { const pasos = [['Extraídos únicos','extraccion','items_unicos'],['Sin canónico','canonicos','sin_canonico'],
+      ['Cruce catálogo','matching_catalogo','con_cruce'],['Con SAP id','sap','con_sap_id']];
+    const max = q(cad,'extraccion','items_unicos') || 1;
+    return `<div class="bars">` + pasos.map(([n,e,c],i) => bar(n, q(cad,e,c), max, `var(--ord-${i+1})`)).join('') + `</div>`; };
+  const reparto = cad => { const A = qs(r=>r[0]===cad&&r[3]==='destino_final'&&r[1]==='asignacion_existentes');
+    const B = qs(r=>r[0]===cad&&r[3]==='destino_final'&&r[1]==='creacion_nuevos');
+    const P = qs(r=>r[0]===cad&&r[3]==='destino_final'&&r[1]==='perdidas');
+    return {cad, vals:[A,B,P]}; };
+  const repMax = Math.max(1,...cadenas.map(c=>reparto(c).vals.reduce((a,b)=>a+b,0)));
+
+  $('cuerpo').innerHTML = `
+  <div class="bloque"><div class="eyebrow">Tronco común · etapas 1–5</div>
+    <p class="desc">Extracción, verificación de canónicos y cliente, cruce con catálogo y SAP. Al final, el set sin canónico se reparte entre los dos flujos.</p>
+    <section><div class="two">${cadenas.map(c=>`<div class="card"><div class="pt">Embudo ${c}</div>${funnel(c)}</div>`).join('')}</div></section>
+    <section><div class="sec-h"><h2>Reparto del set sin canónico</h2></div><div class="card"><div class="bars" style="gap:13px">
+      ${cadenas.map(c=>{const r=reparto(c); return stack(c==='lider'?'Lider':'Cencosud', r.vals, ['Flujo A','Flujo B','Pérdidas'], ['var(--ord-4)','var(--ord-2)','var(--muted)'], repMax);}).join('')}
+    </div><div class="legend"><span class="lg"><i style="background:var(--ord-4)"></i> Flujo A · asignación</span>
+      <span class="lg"><i style="background:var(--ord-2)"></i> Flujo B · creación</span>
+      <span class="lg"><i style="background:var(--muted)"></i> Pérdidas</span></div></div></section>
+  </div>
+  <div class="bloque"><div class="eyebrow">Flujo A · Asignación a canónicos existentes</div>
+    <p class="desc">Items cuyo cruce apuntó a un canónico ya creado: se les suben product codes. Canónicos impactados: <b>${fmt(q('ambas','carga_canonicos','canonicos_impactados'))}</b>.</p>
+    <section><div class="sec-h"><h2>A1 · Resultado por cadena</h2></div><div class="card">${grouped(grpCat('destino_final','asignacion_existentes'))}</div></section>
+    <section><div class="sec-h"><h2>A2 · Métodos de cruce RP</h2><span class="note">se solapan — no suman contra el funnel</span></div>
+      <div class="two">${cadenas.map(c=>{const m=R.filter(r=>r[0]===c&&r[3]==='rp_metodo'&&r[5]>0).sort((a,b)=>b[5]-a[5]).map(r=>[r[4],r[5]]);
+        return `<div class="card"><div class="pt">${c}</div>${barsBlock(m,'var(--s1)')}</div>`;}).join('')}</div></section>
+    <section><div class="sec-h"><h2>A3 · Product codes por tipo</h2></div><div class="card"><div class="bars" style="gap:13px">
+      ${(()=>{const rowsA=cadenas.map(c=>({c, vals:TIPOS.map(t=>q(c,'carga_productcodes',t))}));
+        const max=Math.max(1,...rowsA.map(r=>r.vals.reduce((a,b)=>a+b,0)));
+        return rowsA.map(r=>stack(r.c==='lider'?'Lider':'Cencosud', r.vals, TIPOS, COLS, max)).join('');})()}
+    </div>${legendTipos}</div></section>
+    <section><div class="sec-h"><h2>A4 · Combos de fuentes por canónico existente</h2></div>
+      <div class="card">${barsBlock(combos('carga_combos'),'var(--s1)',true)}</div></section>
+  </div>
+  <div class="bloque"><div class="eyebrow">Flujo B · Creación de canónicos nuevos</div>
+    <p class="desc">Items sin canónico: se clusterizan, se crea el canónico (staging) y quedan sus codes preparados.</p>
+    <section><div class="sec-h"><h2>B1 · Resultado por cadena</h2></div><div class="card">${grouped(grpCat('destino_final','creacion_nuevos'))}</div></section>
+    <section><div class="sec-h"><h2>B2 · Estado del staging</h2></div><div class="card">
+      ${barsBlock(R.filter(r=>r[3]==='creacion_estado').map(r=>[r[4],r[5]]), 'var(--s2)')}</div></section>
+    <section><div class="sec-h"><h2>B3 · Combos de fuentes por canónico nuevo</h2></div>
+      <div class="card">${barsBlock(combos('creacion_canonicos'),'var(--s1)',true)}</div></section>
+    <section><div class="sec-h"><h2>B4 · Product codes preparados</h2></div><div class="card"><div class="bars">
+      ${stack('Canónicos nuevos', TIPOS.map(t=>q('ambas','creacion_productcodes',t)), TIPOS, COLS,
+              Math.max(1,TIPOS.reduce((a,t)=>a+q('ambas','creacion_productcodes',t),0)))}
+    </div>${legendTipos}</div></section>
+  </div>
+  <div class="bloque"><div class="eyebrow">Pérdidas del tronco común</div>
+    <p class="desc">Descartados por filtros de calidad antes de llegar a un flujo. La cuarentena MV no está aquí (pertenece al Flujo A).</p>
+    <section><div class="card">${grouped(grpCat('destino_final','perdidas'))}</div></section>
+  </div>`;
+}
+render();
+</script>
+</body>
+</html>
